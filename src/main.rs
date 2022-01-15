@@ -1,11 +1,11 @@
 use image::{GenericImage, GenericImageView, DynamicImage, Rgba};
 
 fn main() {
-    let base_image = image::open("test2.jpg").unwrap();
+    let base_image = image::open("image.jpg").unwrap();
 
     let d_image = dither(base_image);
 
-    d_image.save("dithered.jpg").unwrap();
+    d_image.save("dithered_image.jpg").unwrap();
 
 }
 
