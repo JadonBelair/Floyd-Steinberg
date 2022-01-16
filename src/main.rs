@@ -1,36 +1,36 @@
 use image::{GenericImage, GenericImageView, DynamicImage, Rgba};
+use std::env;
 
 fn main() {
-    let base_image = image::open("image.jpg").unwrap();
+    let image_path = env::args().collect::<Vec<String>>()[1].clone();
 
-    let d_image = dither(base_image);
+    let base_image = image::open(image_path).expect("failed to open image");
+
+    let rgb_quantize = |col: Rgba<u8>| -> Rgba<u8> {
+        let n_bits = 2;
+        let f_levels: f32 = ((1 << n_bits) - 1) as f32;
+
+        let nr = f32::clamp(f32::round(col[0] as f32 / 255.0 * f_levels) / f_levels * 255.0, 0.0, 255.0) as u8;
+        let ng = f32::clamp(f32::round(col[1] as f32 / 255.0 * f_levels) / f_levels * 255.0, 0.0, 255.0) as u8;
+        let nb = f32::clamp(f32::round(col[2] as f32 / 255.0 * f_levels) / f_levels * 255.0, 0.0, 255.0) as u8;
+        let na = col[3];
+
+        Rgba::from([nr,ng,nb,na])
+    };
+
+    let d_image = dither(base_image, rgb_quantize);
 
     d_image.save("dithered_image.jpg").unwrap();
 
 }
 
-fn quantize(col: Rgba<u8>) -> Rgba<u8> {
-
-    let n_bits = 2;
-
-    let f_levels: f32 = ((1 << n_bits) - 1) as f32;
-
-    let nr = f32::clamp(f32::round(col[0] as f32 / 255.0 * f_levels) / f_levels * 255.0, 0.0, 255.0) as u8;
-    let ng = f32::clamp(f32::round(col[1] as f32 / 255.0 * f_levels) / f_levels * 255.0, 0.0, 255.0) as u8;
-    let nb = f32::clamp(f32::round(col[2] as f32 / 255.0 * f_levels) / f_levels * 255.0, 0.0, 255.0) as u8;
-    let na = col[3];
-
-    Rgba::from([nr,ng,nb,na])
-
-}
-
-fn dither(source: DynamicImage) -> DynamicImage {
+fn dither<F: Fn(Rgba<u8>) -> Rgba<u8>>(source: DynamicImage, f: F) -> DynamicImage {
     let mut dest = source.clone();
 
     for y in 0..source.height() {
         for x in 0..source.width() {
             let op = dest.get_pixel(x, y);
-            let qp = quantize(op);
+            let qp = f(op);
 
             let error: [i32; 3] = [
                 op[0] as i32 - qp[0] as i32,
